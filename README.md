@@ -1,59 +1,40 @@
 # Pipeline Parallel Reinforcement Learning Training (DeepSeek R1 style)
 
-> **Warning**: This project is currently in a very early experimental stage and under heavy development. All features are subject to significant changes and improvements. This implementation is primarily a learning project to rebuild the DeepSeek R1 training pipeline from scratch.
+> **Warning**: This project is currently in a very early experimental stage and not yet ready for use. All stuff is subject to significant changes and improvements. This implementation is primarily a learning project to rebuild the DeepSeek R1 training pipeline from scratch.
 
 ## Current State
 
-This project implements a basic version of pipeline-parallel training for language models using Group-Relative Policy Optimization (GRPO) in the style of R1 Zero (https://arxiv.org/pdf/2501.12948). The current implementation:
+This project implements a very basic version of pipeline-parallel training for language models using Group-Relative Policy Optimization (GRPO) in the style of R1 Zero (https://arxiv.org/pdf/2501.12948). The current implementation:
 
-- Has only been tested with Qwen2.5 0.5B & 1.5B Instruct model on 4xL4
+- Has only been tested with Qwen2.5 0.5B & 1.5B Instruct model on 4xL4 and 2xL4 GPUs
 - Has not yet produced "good" results for simple tasks (e.g. multiplication, character counting, task scheduling) but is able to train at get somehwat better (not yet tested a lot, I think it's mainly a matter of hyperparameters. As soon as I have a good training run, I'll update this section)
-- Is not optimized for performance
-- Lacks many important features (e.g. tensor parallelism, process based pipeline parallelism, parallel generation/sampling, validation pipeline, excessive logging)
+- Is not optimized for performance (e.g. the parallelism is implemented using threads, also the backward pass is not parallelized. All this is very inefficient and is subject to change)
+- Lacks many important features (e.g. parallel generation/sampling, validation pipeline, excessive logging, tensor parallelism support)
 
 ### Key Features
 
-- Basic pipeline parallel training across multiple GPUs using threads for the forward and backward pass of the target policy
 - GRPO implementation following https://arxiv.org/pdf/2402.03300 (except that here "hard" validations are used, so rule based validations/rewards like in DeepSeek R1)
 - Support for Qwen2 models
 - Simple numerical reward functions
 
-## Major Limitations & Planned Improvements
 
-### Performance Issues
+### Performance Issues/Feature Gaps
 - Generation/Sampling is not parallelized (all sampling happens on a single GPU)
 - Reference and old policy models are processed on single GPUs rather than being pipeline parallel/tensor parallel
 - Limited optimization for memory efficiency
 - No tensor parallelism support yet
-- Due to thread based parallelism, no multi-node support yet (only single nodes with multiple GPUs are supported)
-
-### Feature Gaps
+- No multi-node distributed training support yet
+- No good checkpointing/failure recovery
+- No validation pipeline
+- Limited model architecture support (only Qwen2.x is supported)
 - Limited reward function types (only simple numerical comparisons)
-- Limited model architecture support
-- No proper testing suite
 
-### Planned Improvements
-
-#### Short Term
-1. Parallelize generation/sampling process
-2. Parallelize reference/old policy model logprobs processing
-3. Improve memory efficiency of loss computation (so that the microbatch size can be increased, e.g. by using tensor parallelism. I've tested CPU offloading but the overhead for memory transfer is too high)
-4. Add better basic checkpointing
-5. Add more reward function types (LaTeX-aware, code execution, embedding-based)
-
-#### Medium Term
-1. Optimize overall pipeline efficiency
-2. Add support for more model architectures
-3. Add tests
-
-#### Long Term
-1. Multi-node distributed training support
-2. Advanced checkpointing and failure recovery
 
 ## Requirements
 
 - PyTorch
 - Transformers (v4.47.1)
+- Datasets
 - CUDA-capable GPUs (minimum 2)
 
 ## Installation
@@ -74,7 +55,7 @@ trainer = GRPOTrainer(
     devices=["cuda:0", "cuda:1", "cuda:2", "cuda:3"],
     batch_size=16,
     microbatch_size=1,
-    project_dir="test2",
+    project_dir="test",
     loss_device="cuda:2",
     verbose=True
 )
